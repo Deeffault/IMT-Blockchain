@@ -99,15 +99,33 @@ export const useVotingContract = () => {
 
   // Vérification si l'utilisateur est un votant enregistré
   useEffect(() => {
-    if (
-      voterInfo &&
-      typeof voterInfo === "object" &&
-      "isRegistered" in voterInfo
-    ) {
-      setIsVoter((voterInfo as Voter).isRegistered);
+    console.log("Raw voter info:", voterInfo);
+
+    if (voterInfo) {
+      // Handle array format (which is likely what's happening)
+      if (Array.isArray(voterInfo)) {
+        const [isRegistered, hasVoted, delegate, votedProposalId, weight] =
+          voterInfo;
+        setIsVoter(isRegistered);
+        console.log("Voter status from array:", isRegistered);
+      }
+      // Handle object format (what your current code expects)
+      else if (typeof voterInfo === "object" && "isRegistered" in voterInfo) {
+        setIsVoter((voterInfo as Voter).isRegistered);
+        console.log(
+          "Voter status from object:",
+          (voterInfo as Voter).isRegistered
+        );
+      }
+      // Add fallback if none of the above work
+      else {
+        console.log("Unexpected voter info format:", voterInfo);
+        setIsVoter(false);
+      }
+    } else {
+      console.log("No voter info available");
     }
   }, [voterInfo]);
-
   // Fonction pour récupérer une proposition par son ID
   const getProposal = async (id: number): Promise<Proposal> => {
     try {
