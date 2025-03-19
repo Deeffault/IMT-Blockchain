@@ -1,5 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-ethers";
+import "@typechain/ethers-v6";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -33,6 +35,10 @@ const config: HardhatUserConfig = {
         version: "0.8.29",
       },
     ],
+  },
+  typechain: {
+    outDir: "typechain-types",
+    target: "ethers-v6",
   },
 };
 
