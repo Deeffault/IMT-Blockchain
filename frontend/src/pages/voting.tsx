@@ -10,7 +10,8 @@ import { VotingABI } from "../contracts/VotingABI";
 import styles from "../styles/Home.module.css";
 
 // Contract address - replace with your deployed contract address
-const CONTRACT_ADDRESS = "0x..." as `0x${string}`;
+const CONTRACT_ADDRESS =
+  "0xEc657E34B61642cCF557933c6556Ac5aDbfd71c4" as `0x${string}`;
 
 // Workflow status enum mapping
 const WorkflowStatus = {
