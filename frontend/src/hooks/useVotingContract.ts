@@ -7,7 +7,7 @@ import {
 } from "wagmi";
 import { useState, useEffect } from "react";
 import { abi } from "../utils/contractUtils";
-// Removed unused import: parseEther
+import { useNotification } from "../components/NotificationContext";
 
 // Définition des types pour les structures du contrat
 export type WorkflowStatus = 0 | 1 | 2 | 3 | 4 | 5;
@@ -35,12 +35,14 @@ export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
 // Le hook principal pour interagir avec le contrat
 export const useVotingContract = () => {
-  // Moved publicClient inside the hook
   const publicClient = usePublicClient();
   const { address } = useAccount();
+  const { showNotification } = useNotification();
   const [currentStatus, setCurrentStatus] = useState<WorkflowStatus>(0);
   const [isOwner, setIsOwner] = useState(false);
   const [isVoter, setIsVoter] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [delegated, setDelegated] = useState<string | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [winningProposal, setWinningProposal] =
     useState<WinningProposal | null>(null);
@@ -75,13 +77,29 @@ export const useVotingContract = () => {
   });
 
   // Configuration pour écrire dans le contrat
-  const { data: hash, writeContract } = useWriteContract();
+  const { data: hash, writeContract, status, error } = useWriteContract();
 
   // Attente de la transaction
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({
       hash,
     });
+
+  // Gestion des statuts et erreurs de transactions
+  useEffect(() => {
+    if (status === "success" && hash) {
+      showNotification("Transaction soumise avec succès", "success", hash);
+    } else if (status === "error" && error) {
+      showNotification(`Erreur: ${error.message}`, "error");
+    }
+  }, [status, hash, error, showNotification]);
+
+  // Notification lors de la confirmation de transaction
+  useEffect(() => {
+    if (isConfirmed && hash) {
+      showNotification("Transaction confirmée!", "success", hash);
+    }
+  }, [isConfirmed, hash, showNotification]);
 
   // Mise à jour du statut du workflow
   useEffect(() => {
@@ -97,39 +115,48 @@ export const useVotingContract = () => {
     }
   }, [owner, address]);
 
-  // Vérification si l'utilisateur est un votant enregistré
+  // Vérification si l'utilisateur est un votant enregistré et s'il a déjà voté
   useEffect(() => {
-    console.log("Raw voter info:", voterInfo);
-
     if (voterInfo) {
-      // Handle array format (which is likely what's happening)
       if (Array.isArray(voterInfo)) {
-        const [isRegistered, hasVoted, delegate, votedProposalId, weight] =
-          voterInfo;
+        const [
+          isRegistered,
+          hasVotedValue,
+          delegateValue,
+          votedProposalId,
+          weight,
+        ] = voterInfo;
         setIsVoter(isRegistered);
-        console.log("Voter status from array:", isRegistered);
-      }
-      // Handle object format (what your current code expects)
-      else if (typeof voterInfo === "object" && "isRegistered" in voterInfo) {
-        setIsVoter((voterInfo as Voter).isRegistered);
-        console.log(
-          "Voter status from object:",
-          (voterInfo as Voter).isRegistered
+        setHasVoted(hasVotedValue);
+        setDelegated(
+          delegateValue !== "0x0000000000000000000000000000000000000000"
+            ? delegateValue
+            : null
         );
-      }
-      // Add fallback if none of the above work
-      else {
-        console.log("Unexpected voter info format:", voterInfo);
+      } else if (typeof voterInfo === "object" && "isRegistered" in voterInfo) {
+        const voter = voterInfo as Voter;
+        setIsVoter(voter.isRegistered);
+        setHasVoted(voter.hasVoted);
+        setDelegated(
+          voter.delegate !== "0x0000000000000000000000000000000000000000"
+            ? voter.delegate
+            : null
+        );
+      } else {
         setIsVoter(false);
+        setHasVoted(false);
+        setDelegated(null);
       }
     } else {
-      console.log("No voter info available");
+      setIsVoter(false);
+      setHasVoted(false);
+      setDelegated(null);
     }
   }, [voterInfo]);
+
   // Fonction pour récupérer une proposition par son ID
   const getProposal = async (id: number): Promise<Proposal> => {
     try {
-      console.log(`Fetching proposal ${id} from contract`);
       if (!publicClient) {
         return { description: "Client not ready", voteCount: 0 };
       }
@@ -141,8 +168,6 @@ export const useVotingContract = () => {
         args: [BigInt(id)],
       });
 
-      console.log(`Proposal data:`, result);
-      // Properly type the result
       const typedResult = result as [string, bigint];
 
       return {
@@ -180,7 +205,6 @@ export const useVotingContract = () => {
           setWinningProposal(winningProposalData);
         } catch (error) {
           console.error("Error loading winning proposal:", error);
-          // Set default winning proposal when there's an error
           setWinningProposal({
             proposalId: 0,
             description: "No winning proposal available",
@@ -196,7 +220,6 @@ export const useVotingContract = () => {
   // Fonction pour récupérer la proposition gagnante
   const getWinningProposal = async (): Promise<WinningProposal> => {
     try {
-      console.log("Fetching winning proposal from contract");
       if (!publicClient) {
         return {
           proposalId: 0,
@@ -205,7 +228,6 @@ export const useVotingContract = () => {
         };
       }
 
-      // Check if there are any proposals first
       if (proposals.length === 0) {
         return {
           proposalId: 0,
@@ -220,8 +242,6 @@ export const useVotingContract = () => {
         functionName: "getWinningProposal",
       });
 
-      console.log("Winning proposal data:", result);
-      // Properly type the result
       const typedResult = result as [bigint, string, bigint];
 
       return {
@@ -350,6 +370,8 @@ export const useVotingContract = () => {
     currentStatus,
     isOwner,
     isVoter,
+    hasVoted,
+    delegated,
     proposals,
     winningProposal,
     isConfirming,

@@ -136,13 +136,16 @@ describe("Voting Contract", function () {
 
     it("ne devrait pas permettre d'enregistrer un votant déjà enregistré", async function () {
       await votingContract.registerVoter(voter1.address);
-      await expect(votingContract.registerVoter(voter1.address))
-        .to.be.revertedWith("Voter already registered.");
+      await expect(
+        votingContract.registerVoter(voter1.address)
+      ).to.be.revertedWith("Voter already registered.");
     });
 
     it("ne devrait pas permettre d'enregistrer l'adresse nulle", async function () {
       await expect(
-        votingContract.registerVoter("0x0000000000000000000000000000000000000000")
+        votingContract.registerVoter(
+          "0x0000000000000000000000000000000000000000"
+        )
       ).to.be.revertedWith("Invalid address.");
     });
 
@@ -313,21 +316,24 @@ describe("Voting Contract", function () {
     it("ne devrait pas permettre de voter deux fois", async function () {
       await setupVotingProcess();
       await votingContract.connect(voter1).vote(0);
-      await expect(votingContract.connect(voter1).vote(1))
-        .to.be.revertedWith("You have already voted.");
+      await expect(votingContract.connect(voter1).vote(1)).to.be.revertedWith(
+        "You have already voted."
+      );
     });
 
     it("ne devrait pas permettre de voter pour une proposition inexistante", async function () {
       await setupVotingProcess();
-      await expect(votingContract.connect(voter1).vote(99))
-        .to.be.revertedWith("Invalid proposal ID.");
+      await expect(votingContract.connect(voter1).vote(99)).to.be.revertedWith(
+        "Invalid proposal ID."
+      );
     });
 
     it("ne devrait pas permettre de voter hors de la phase de vote", async function () {
       await setupVotingProcess();
       await endVotingSession();
-      await expect(votingContract.connect(voter1).vote(0))
-        .to.be.revertedWith("Voting session is not open.");
+      await expect(votingContract.connect(voter1).vote(0)).to.be.revertedWith(
+        "Voting session is not open."
+      );
     });
   });
 
@@ -401,7 +407,8 @@ describe("Voting Contract", function () {
       await votingContract.tallyVotes();
       expect(await votingContract.winningProposalId()).to.equal(1);
 
-      const [id, description, voteCount] = await votingContract.getWinningProposal();
+      const [id, description, voteCount] =
+        await votingContract.getWinningProposal();
       expect(id).to.equal(1);
       expect(description).to.equal("Proposition 2");
       expect(voteCount).to.equal(2);
@@ -452,7 +459,8 @@ describe("Voting Contract", function () {
       await endVotingSession();
 
       await votingContract.tallyVotes();
-      const [id, description, voteCount] = await votingContract.getWinningProposal();
+      const [id, description, voteCount] =
+        await votingContract.getWinningProposal();
       expect(id).to.equal(1);
       expect(description).to.equal("Proposition 2");
       expect(voteCount).to.equal(2);
@@ -463,10 +471,11 @@ describe("Voting Contract", function () {
     it("devrait permettre à un votant d'augmenter son poids de vote en payant", async function () {
       await setupBuyWeight();
       const weightBefore = (await votingContract.voters(voter1.address)).weight;
-      
-      await expect(votingContract.connect(voter1).buyWeight({ value: 1 }))
-        .to.changeEtherBalances([voter1, votingContract], [-1, 1]);
-      
+
+      await expect(
+        votingContract.connect(voter1).buyWeight({ value: 1 })
+      ).to.changeEtherBalances([voter1, votingContract], [-1, 1]);
+
       const weightAfter = (await votingContract.voters(voter1.address)).weight;
       expect(weightAfter).to.equal(weightBefore + BigInt(1));
     });
@@ -491,7 +500,9 @@ describe("Voting Contract", function () {
       await setupBuyWeight();
       await expect(
         votingContract.connect(voter1).buyWeight({ value: 0 })
-      ).to.be.revertedWith("Incorrect Ether value sent. Must be a multiple of 1 wei.");
+      ).to.be.revertedWith(
+        "Incorrect Ether value sent. Must be a multiple of 1 wei."
+      );
     });
 
     it("ne devrait pas permettre à un non-votant d'acheter du poids", async function () {
@@ -509,18 +520,21 @@ describe("Voting Contract", function () {
       await votingContract.connect(voter2).vote(0);
       await endVotingSession();
       await votingContract.tallyVotes();
-      
-      await expect(votingContract.withdrawFunds())
-        .to.changeEtherBalance(owner, 2);
-      
+
+      await expect(votingContract.withdrawFunds()).to.changeEtherBalance(
+        owner,
+        2
+      );
+
       const contractAddress = await votingContract.getAddress();
       expect(await ethers.provider.getBalance(contractAddress)).to.equal(0n);
     });
 
     it("ne devrait pas permettre de retirer les fonds s'il n'y en a pas", async function () {
       await setupBuyWeight();
-      await expect(votingContract.withdrawFunds())
-        .to.be.revertedWith("No funds to withdraw.");
+      await expect(votingContract.withdrawFunds()).to.be.revertedWith(
+        "No funds to withdraw."
+      );
     });
   });
 });

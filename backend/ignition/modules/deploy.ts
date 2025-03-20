@@ -1,6 +1,10 @@
 import { ethers } from "hardhat";
 
 async function main() {
+  // Récupérer le premier signataire (déployeur par défaut)
+  const [deployer] = await ethers.getSigners();
+  console.log("Déploiement avec l'adresse:", deployer.address);
+
   console.log("Déploiement du contrat Voting...");
 
   const voting = await ethers.deployContract("Voting");

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useVotingContract } from "../hooks/useVotingContract";
+import Loader from "./Loader";
 
 const VoterPanel: React.FC = () => {
   const [proposalDesc, setProposalDesc] = useState("");
@@ -7,18 +8,14 @@ const VoterPanel: React.FC = () => {
   const {
     currentStatus,
     isVoter,
+    hasVoted,
+    delegated,
     proposals,
     addProposal,
     delegate,
     vote,
     isConfirming,
   } = useVotingContract();
-
-  useEffect(() => {
-    console.log("isVoter:", isVoter);
-    console.log("currentStatus:", currentStatus);
-    console.log("proposals:", proposals);
-  }, [isVoter, currentStatus, proposals]);
 
   // Si l'utilisateur n'est pas un votant enregistré, ne pas afficher le panneau
   if (!isVoter) {
@@ -54,6 +51,35 @@ const VoterPanel: React.FC = () => {
     <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
       <h2 className="text-2xl font-bold mb-4">Panneau du votant</h2>
 
+      {/* Affichage des informations sur l'état du vote de l'utilisateur */}
+      <div className="mb-4">
+        <div className="p-3 bg-gray-100 rounded-lg mb-4">
+          <h3 className="font-semibold mb-1">Statut de votre vote</h3>
+          {hasVoted && (
+            <p className="text-green-600">
+              <span className="inline-block mr-2">✓</span>
+              Vous avez déjà voté
+            </p>
+          )}
+          {delegated && (
+            <p className="text-purple-600">
+              <span className="inline-block mr-2">➔</span>
+              Vous avez délégué votre vote à {delegated.substring(0, 6)}...
+              {delegated.substring(38)}
+            </p>
+          )}
+          {!hasVoted && !delegated && (
+            <p className="text-gray-600">Vous n'avez pas encore voté</p>
+          )}
+        </div>
+      </div>
+
+      {isConfirming && (
+        <div className="mb-4">
+          <Loader />
+        </div>
+      )}
+
       {currentStatus === 1 && (
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Proposer une idée</h3>
@@ -77,7 +103,7 @@ const VoterPanel: React.FC = () => {
         </div>
       )}
 
-      {currentStatus === 3 && (
+      {currentStatus === 3 && !hasVoted && !delegated && (
         <>
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">
@@ -126,6 +152,22 @@ const VoterPanel: React.FC = () => {
             </form>
           </div>
         </>
+      )}
+
+      {currentStatus === 3 && (hasVoted || delegated) && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          {hasVoted && (
+            <p>
+              Vous avez déjà voté. Vous ne pouvez pas voter à nouveau ou
+              déléguer votre vote.
+            </p>
+          )}
+          {delegated && (
+            <p>
+              Vous avez délégué votre vote. Votre délégué votera en votre nom.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

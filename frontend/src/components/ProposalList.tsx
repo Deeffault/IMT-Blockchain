@@ -1,9 +1,17 @@
 import React from "react";
 import { useVotingContract, Proposal } from "../hooks/useVotingContract";
+import Loader from "./Loader";
 
 const ProposalList: React.FC = () => {
-  const { currentStatus, isVoter, proposals, vote, isConfirming } =
-    useVotingContract();
+  const {
+    currentStatus,
+    isVoter,
+    hasVoted,
+    delegated,
+    proposals,
+    vote,
+    isConfirming,
+  } = useVotingContract();
 
   // Si aucune proposition n'est disponible
   if (proposals.length === 0) {
@@ -23,9 +31,19 @@ const ProposalList: React.FC = () => {
   // Détermine si on affiche les compteurs de votes
   const showVoteCounts = currentStatus >= 4; // Montrer les votes après la fin de la session
 
+  // Déterminer si l'utilisateur peut voter
+  const canVote = isVoter && currentStatus === 3 && !hasVoted && !delegated;
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-4">Propositions</h2>
+
+      {isConfirming && (
+        <div className="mb-4">
+          <Loader />
+        </div>
+      )}
+
       <div className="space-y-4">
         {proposals.map((proposal: Proposal, index: number) => (
           <div key={index} className="p-4 border rounded-lg hover:bg-gray-50">
@@ -38,7 +56,7 @@ const ProposalList: React.FC = () => {
               )}
             </div>
 
-            {currentStatus === 3 && isVoter && (
+            {canVote && (
               <button
                 onClick={() => handleVote(index)}
                 disabled={isConfirming}
