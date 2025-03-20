@@ -365,6 +365,25 @@ export const useVotingContract = () => {
     });
   };
 
+  const buyWeight = (amount: number) => {
+    if (!address) return;
+    writeContract({
+      address: CONTRACT_ADDRESS as `0x${string}`,
+      abi,
+      functionName: "buyWeight",
+      value: BigInt(amount),
+    });
+  };
+
+  const withdrawFunds = () => {
+    if (!address) return;
+    writeContract({
+      address: CONTRACT_ADDRESS as `0x${string}`,
+      abi,
+      functionName: "withdrawFunds",
+    });
+  };
+
   return {
     address,
     currentStatus,
@@ -385,5 +404,7 @@ export const useVotingContract = () => {
     addProposal,
     vote,
     delegate,
+    buyWeight,
+    withdrawFunds,
   };
 };

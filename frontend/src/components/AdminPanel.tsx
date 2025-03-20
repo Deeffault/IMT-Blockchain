@@ -17,6 +17,7 @@ const AdminPanel: React.FC = () => {
     startVotingSession,
     endVotingSession,
     tallyVotes,
+    withdrawFunds,
     isConfirming,
   } = useVotingContract();
 
@@ -137,6 +138,16 @@ const AdminPanel: React.FC = () => {
             className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 disabled:bg-gray-400"
           >
             Comptabiliser les votes
+          </button>
+        )}
+
+        {isOwner && (
+          <button
+            onClick={withdrawFunds}
+            disabled={isConfirming}
+            className="bg-purple-800 text-white px-4 py-2 rounded hover:bg-purple-900 disabled:bg-gray-400"
+          >
+            {isConfirming ? "En cours..." : "Retirer les fonds"}
           </button>
         )}
       </div>

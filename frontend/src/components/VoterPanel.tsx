@@ -5,6 +5,7 @@ import Loader from "./Loader";
 const VoterPanel: React.FC = () => {
   const [proposalDesc, setProposalDesc] = useState("");
   const [delegateAddress, setDelegateAddress] = useState("");
+  const [weightAmount, setWeightAmount] = useState<number>(1);
   const {
     currentStatus,
     isVoter,
@@ -14,6 +15,7 @@ const VoterPanel: React.FC = () => {
     addProposal,
     delegate,
     vote,
+    buyWeight,
     isConfirming,
   } = useVotingContract();
 
@@ -45,6 +47,13 @@ const VoterPanel: React.FC = () => {
 
   const handleVote = (proposalId: number) => {
     vote(proposalId);
+  };
+
+  const handleBuyWeight = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (weightAmount > 0) {
+      buyWeight(weightAmount);
+    }
   };
 
   return (
@@ -152,6 +161,35 @@ const VoterPanel: React.FC = () => {
             </form>
           </div>
         </>
+      )}
+
+      {currentStatus === 3 && !hasVoted && !delegated && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">
+            Augmenter votre poids de vote
+          </h3>
+          <p className="text-sm text-gray-600 mb-2">
+            Vous pouvez acheter du poids de vote supplémentaire. Chaque wei
+            envoyé augmente votre poids de 1.
+          </p>
+          <form onSubmit={handleBuyWeight} className="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              value={weightAmount}
+              onChange={(e) => setWeightAmount(parseInt(e.target.value))}
+              className="w-32 p-2 border rounded"
+              required
+            />
+            <button
+              type="submit"
+              disabled={isConfirming}
+              className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 disabled:bg-gray-400"
+            >
+              {isConfirming ? "En cours..." : "Acheter du poids"}
+            </button>
+          </form>
+        </div>
       )}
 
       {currentStatus === 3 && (hasVoted || delegated) && (

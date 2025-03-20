@@ -313,4 +313,18 @@ export const abi = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [],
+    name: "buyWeight",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "withdrawFunds",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ];
