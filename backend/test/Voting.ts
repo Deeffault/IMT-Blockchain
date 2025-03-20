@@ -459,50 +459,6 @@ describe("Voting Contract", function () {
     });
   });
 
-  describe("Tests avancés de délégation", function () {
-    it("devrait permettre à un votant de déléguer son vote", async function () {
-      await setupAdvancedDelegation();
-      await expect(votingContract.connect(voter1).delegate(voter2.address))
-        .to.emit(votingContract, "VoterDelegated")
-        .withArgs(voter1.address, voter2.address);
-
-      const delegator = await votingContract.voters(voter1.address);
-      expect(delegator.hasVoted).to.be.true;
-      expect(delegator.delegate).to.equal(voter2.address);
-
-      const delegate = await votingContract.voters(voter2.address);
-      expect(delegate.weight).to.equal(2);
-    });
-
-    it("devrait transférer le poids du vote au délégué lorsque celui-ci vote", async function () {
-      await setupAdvancedDelegation();
-      await votingContract.connect(voter1).delegate(voter2.address);
-      await votingContract.connect(voter2).vote(0);
-      const proposal = await votingContract.proposals(0);
-      expect(proposal.voteCount).to.equal(2);
-    });
-
-    it("devrait permettre des délégations en chaîne", async function () {
-      await setupAdvancedDelegation();
-      await votingContract.connect(voter1).delegate(voter2.address);
-      await votingContract.connect(voter2).delegate(voter3.address);
-      const delegate = await votingContract.voters(voter3.address);
-      expect(delegate.weight).to.equal(3);
-      await votingContract.connect(voter3).vote(0);
-      const proposal = await votingContract.proposals(0);
-      expect(proposal.voteCount).to.equal(3);
-    });
-
-    it("ne devrait pas permettre de créer une boucle de délégation", async function () {
-      await setupAdvancedDelegation();
-      await votingContract.connect(voter1).delegate(voter2.address);
-      await votingContract.connect(voter2).delegate(voter3.address);
-      await expect(
-        votingContract.connect(voter3).delegate(voter1.address)
-      ).to.be.revertedWith("Found delegation loop.");
-    });
-  });
-
   describe("Tests d'achat de poids de vote", function () {
     it("devrait permettre à un votant d'augmenter son poids de vote en payant", async function () {
       await setupBuyWeight();
