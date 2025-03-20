@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useVotingContract, WorkflowStatus } from "../hooks/useVotingContract";
 import { useAccount } from "wagmi";
+import Loader from "./Loader";
 
 const AdminPanel: React.FC = () => {
   const [voterAddress, setVoterAddress] = useState("");
@@ -19,6 +20,7 @@ const AdminPanel: React.FC = () => {
     tallyVotes,
     withdrawFunds,
     isConfirming,
+    isReloading,
   } = useVotingContract();
 
   // Add debug logging
@@ -149,6 +151,19 @@ const AdminPanel: React.FC = () => {
           >
             {isConfirming ? "En cours..." : "Retirer les fonds"}
           </button>
+        )}
+
+        {(isConfirming || isReloading) && (
+          <div className="mb-4">
+            <Loader
+              message={
+                isConfirming
+                  ? "Transaction en cours..."
+                  : "Mise à jour des données..."
+              }
+              isReloading={isReloading}
+            />
+          </div>
         )}
       </div>
     </div>

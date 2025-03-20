@@ -17,6 +17,7 @@ const VoterPanel: React.FC = () => {
     vote,
     buyWeight,
     isConfirming,
+    isReloading,
   } = useVotingContract();
 
   // Si l'utilisateur n'est pas un votant enregistré, ne pas afficher le panneau
@@ -83,9 +84,16 @@ const VoterPanel: React.FC = () => {
         </div>
       </div>
 
-      {isConfirming && (
+      {(isConfirming || isReloading) && (
         <div className="mb-4">
-          <Loader />
+          <Loader
+            message={
+              isConfirming
+                ? "Transaction en cours..."
+                : "Mise à jour des données..."
+            }
+            isReloading={isReloading}
+          />
         </div>
       )}
 

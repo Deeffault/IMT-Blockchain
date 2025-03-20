@@ -11,6 +11,7 @@ const ProposalList: React.FC = () => {
     proposals,
     vote,
     isConfirming,
+    isReloading,
   } = useVotingContract();
 
   // Si aucune proposition n'est disponible
@@ -38,9 +39,16 @@ const ProposalList: React.FC = () => {
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-4">Propositions</h2>
 
-      {isConfirming && (
+      {(isConfirming || isReloading) && (
         <div className="mb-4">
-          <Loader />
+          <Loader
+            message={
+              isConfirming
+                ? "Transaction en cours..."
+                : "Mise à jour des données..."
+            }
+            isReloading={isReloading}
+          />
         </div>
       )}
 

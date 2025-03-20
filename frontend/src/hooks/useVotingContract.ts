@@ -8,6 +8,7 @@ import {
 import { useState, useEffect } from "react";
 import { abi } from "../utils/contractUtils";
 import { useNotification } from "../components/NotificationContext";
+import { parseAbiItem } from "viem";
 
 // Définition des types pour les structures du contrat
 export type WorkflowStatus = 0 | 1 | 2 | 3 | 4 | 5;
@@ -47,6 +48,8 @@ export const useVotingContract = () => {
   const [winningProposal, setWinningProposal] =
     useState<WinningProposal | null>(null);
 
+  const [isReloading, setIsReloading] = useState(false);
+
   // Lecture du statut du workflow
   const { data: workflowStatus } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
@@ -85,6 +88,204 @@ export const useVotingContract = () => {
       hash,
     });
 
+  // Fonction pour recharger les données du contrat
+  const reloadContractData = async () => {
+    setIsReloading(true);
+
+    try {
+      // Recharger le statut du workflow
+      if (publicClient) {
+        const newStatus = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi,
+          functionName: "workflowStatus",
+        });
+        setCurrentStatus(Number(newStatus) as WorkflowStatus);
+
+        // Recharger les informations du votant
+        if (address) {
+          const voterData = await publicClient.readContract({
+            address: CONTRACT_ADDRESS as `0x${string}`,
+            abi,
+            functionName: "voters",
+            args: [address],
+          });
+
+          if (Array.isArray(voterData)) {
+            const [
+              isRegistered,
+              hasVotedValue,
+              delegateValue,
+              votedProposalId,
+              weight,
+            ] = voterData;
+            setIsVoter(isRegistered);
+            setHasVoted(hasVotedValue);
+            setDelegated(
+              delegateValue !== "0x0000000000000000000000000000000000000000"
+                ? delegateValue
+                : null
+            );
+          }
+        }
+
+        // Recharger le nombre de propositions
+        const newProposalsCount = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi,
+          functionName: "getProposalsCount",
+        });
+
+        // Recharger les propositions
+        if (newProposalsCount && Number(newProposalsCount) > 0) {
+          const proposalPromises = Array.from(
+            { length: Number(newProposalsCount) },
+            (_, i) => getProposal(i)
+          );
+          const refreshedProposals = await Promise.all(proposalPromises);
+          setProposals(refreshedProposals);
+        }
+
+        // Si les votes sont comptabilisés, recharger le gagnant
+        if (Number(newStatus) === 5) {
+          try {
+            const refreshedWinner = await getWinningProposal();
+            setWinningProposal(refreshedWinner);
+          } catch (error) {
+            console.error("Erreur lors du rechargement du gagnant:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erreur pendant le rechargement des données:", error);
+    } finally {
+      // Délai pour une meilleure expérience utilisateur
+      setTimeout(() => {
+        setIsReloading(false);
+      }, 1500);
+    }
+  };
+
+  // Configuration des écouteurs d'événements du contrat
+  const setupContractEventListeners = () => {
+    if (!publicClient || !CONTRACT_ADDRESS) return () => {};
+
+    try {
+      // Écouter l'événement WorkflowStatusChange
+      const unwatchStatus = publicClient.watchContractEvent({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi,
+        eventName: "WorkflowStatusChange",
+        onLogs: (logs) => {
+          console.log("WorkflowStatusChange event detected:", logs);
+          if (logs.length > 0 && logs[0].args) {
+            const newStatus = logs[0].args.newStatus;
+            if (newStatus !== undefined) {
+              setCurrentStatus(Number(newStatus) as WorkflowStatus);
+              reloadContractData();
+            }
+          }
+        },
+      });
+
+      // Écouter l'événement Voted
+      const unwatchVoted = publicClient.watchContractEvent({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi,
+        eventName: "Voted",
+        onLogs: (logs) => {
+          console.log("Voted event detected:", logs);
+          reloadContractData();
+        },
+      });
+
+      // Écouter l'événement ProposalRegistered
+      const unwatchProposal = publicClient.watchContractEvent({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi,
+        eventName: "ProposalRegistered",
+        onLogs: (logs) => {
+          console.log("ProposalRegistered event detected:", logs);
+          reloadContractData();
+        },
+      });
+
+      // Écouter l'événement VoterRegistered
+      const unwatchVoter = publicClient.watchContractEvent({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi,
+        eventName: "VoterRegistered",
+        onLogs: (logs) => {
+          console.log("VoterRegistered event detected:", logs);
+          // Si l'événement concerne l'utilisateur actuel
+          if (
+            logs.length > 0 &&
+            logs[0].args &&
+            logs[0].args.voterAddress === address
+          ) {
+            reloadContractData();
+          }
+        },
+      });
+
+      // Écouter l'événement VoterDelegated
+      const unwatchDelegate = publicClient.watchContractEvent({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi,
+        eventName: "VoterDelegated",
+        onLogs: (logs) => {
+          console.log("VoterDelegated event detected:", logs);
+          reloadContractData();
+        },
+      });
+
+      // Nettoyer les écouteurs lors du démontage du composant
+      return () => {
+        unwatchStatus();
+        unwatchVoted();
+        unwatchProposal();
+        unwatchVoter();
+        unwatchDelegate();
+      };
+    } catch (error) {
+      console.error("Error setting up event listeners:", error);
+      return () => {};
+    }
+  };
+
+  // Mise en place du polling périodique des données
+  useEffect(() => {
+    // Ne démarrer le polling que si l'utilisateur est connecté
+    if (!address || !publicClient) return;
+
+    // Polling toutes les 15 secondes
+    const pollingInterval = setInterval(async () => {
+      try {
+        const currentWorkflowStatus = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi,
+          functionName: "workflowStatus",
+        });
+
+        // Si le statut a changé, recharger toutes les données
+        if (currentStatus !== Number(currentWorkflowStatus)) {
+          console.log("Status change detected via polling");
+          reloadContractData();
+        }
+      } catch (error) {
+        console.error("Erreur de polling:", error);
+      }
+    }, 15000); // 15 secondes
+
+    return () => clearInterval(pollingInterval);
+  }, [address, publicClient, currentStatus]);
+
+  // Configurer les écouteurs d'événements lors du chargement initial
+  useEffect(() => {
+    const cleanup = setupContractEventListeners();
+    return cleanup;
+  }, [publicClient, CONTRACT_ADDRESS, address]);
+
   // Gestion des statuts et erreurs de transactions
   useEffect(() => {
     if (status === "success" && hash) {
@@ -98,6 +299,7 @@ export const useVotingContract = () => {
   useEffect(() => {
     if (isConfirmed && hash) {
       showNotification("Transaction confirmée!", "success", hash);
+      reloadContractData();
     }
   }, [isConfirmed, hash, showNotification]);
 
@@ -384,6 +586,7 @@ export const useVotingContract = () => {
     });
   };
 
+  // Retourne toutes les fonctionnalités et données du hook
   return {
     address,
     currentStatus,
@@ -395,6 +598,7 @@ export const useVotingContract = () => {
     winningProposal,
     isConfirming,
     isConfirmed,
+    isReloading,
     registerVoter,
     startProposalsRegistration,
     endProposalsRegistration,
@@ -406,5 +610,6 @@ export const useVotingContract = () => {
     delegate,
     buyWeight,
     withdrawFunds,
+    reloadContractData, // Export this function to allow manual refresh from components
   };
 };
