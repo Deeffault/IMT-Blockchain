@@ -6,8 +6,7 @@ Promotion : FISA TI 2027
 
 ## Démonstration Vidéo :
 
-<video src="https://user-images.githubusercontent.com/Deeffault/IMT-Blockchain
-/assets/demo.mp4" controls="controls" style="max-width: 730px;"></video>
+<video controls src="assets/demo.mp4" title="Démo"></video>
 
 
 ## Installation : 
@@ -67,8 +66,7 @@ npx hardhat compile
 npx hardhat test
 ```
 
-<video src="https://user-images.githubusercontent.com/Deeffault/IMT-Blockchain
-/assets/tests.mp4" controls="controls" style="max-width: 730px;"></video>
+<video controls src="assets/tests.mp4" title="Tests"></video>
 
 ## Structure du projet
 ```
