@@ -6,8 +6,7 @@ Promotion : FISA TI 2027
 
 ## Démonstration Vidéo :
 
-<video controls src="assets/demo.mp4" title="Démo"></video>
-
+https://github.com/user-attachments/assets/b40553c4-d084-4f28-9921-b1188363b2fb
 
 ## Installation : 
 ```bash
@@ -66,7 +65,7 @@ npx hardhat compile
 npx hardhat test
 ```
 
-<video controls src="assets/tests.mp4" title="Tests"></video>
+https://github.com/user-attachments/assets/4d3c81b1-7209-4a73-85ca-d8f06fdbcaaa
 
 ## Structure du projet
 ```
